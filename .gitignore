@@ -1,0 +1,22 @@
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+coverage/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# SQLite database files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Local editor and system files
+.DS_Store
+.vscode/
