@@ -1,57 +1,90 @@
-# Full-stack assignment: Request Triage
+# Request Triage
 
-## The situation
+A locally runnable full-stack application for importing customer requests from CSV, reviewing them, and assigning an owner and status. Built with React, TypeScript, Vite, Tailwind CSS, NestJS, Prisma 7, and SQLite.
 
-A small operations team receives customer requests as CSV exports. They need a simple web app to import the requests, review them, and track who is handling each one. The current process is a spreadsheet, so duplicate rows and incomplete data sometimes appear.
+## Prerequisites
 
-Build a useful first version. You may use **any language, framework, database, and AI development tools**. We are interested in your decisions and how you verify the result, not your choice of stack or the amount of code you write.
+- Node.js 24 (developed and verified with Node 24.12.0)
+- pnpm 10.33.0
 
-## Timebox
+The application runs locally; no hosted services are required.
 
-Spend **up to four hours** on the take-home work. Submit what you have at that point, even if some features are incomplete. You will have a separate 45-minute review conversation.
+## Setup
 
-No paid service, deployment, authentication, or production-grade visual design is required. The app must run locally with instructions another developer can follow.
+Run the following commands from the repository root in **PowerShell**:
 
-## Data
+```powershell
+pnpm install
+Copy-Item .\backend\.env.example .\backend\.env
+pnpm --filter backend exec prisma generate
+pnpm --filter backend exec prisma migrate deploy
+```
 
-Use [`fixtures/requests.csv`](fixtures/requests.csv) as the shared input. The first row contains these columns:
+If `backend/.env` already exists, **do not overwrite it**. The example file supplies a local SQLite connection string (`DATABASE_URL="file:./dev.db"`). The generated Prisma Client and the SQLite database are not committed and must be created locally. The pnpm workspace permits the `better-sqlite3` native build; if the SQLite driver fails to load, check that dependency installation completed and rebuild it with `pnpm --filter backend rebuild better-sqlite3`.
 
-| Column | Meaning |
-| --- | --- |
-| `external_id` | ID supplied by the customer system |
-| `received_at` | Timestamp supplied by the customer system |
-| `requester` | Name of the person making the request |
-| `subject` | Short title |
-| `description` | Longer text; may be empty |
-| `priority` | Suggested priority from the customer system |
+## Run
 
-The file intentionally contains ordinary rows and edge cases. Do not edit the fixture to make the import succeed. You may add your own fixtures or tests.
+In two terminals, from the repository root:
 
-## Required workflow
+**Terminal 1 — API**
 
-1. Import a CSV file through the app. Show a summary of imported and rejected rows. For rejected rows, give a useful reason and row number.
-2. Show the imported requests in a list. A team member must be able to search the list or filter it by status.
-3. Show the details of a request. A team member must be able to change its status and assign an owner. Choose sensible status values and document them.
-4. Persist the data so imported requests and team edits survive restarting the app.
-5. Handle duplicate `external_id` values and malformed rows deliberately. State your rules in `DECISIONS.md` and apply them consistently. At minimum, reject rows missing `external_id`, `requester`, or `subject`. For other uncertain input, make a reasonable decision and explain it.
+```powershell
+pnpm --filter backend start:dev
+```
 
-The UI can be simple. We will value clear behavior, useful errors, and a coherent flow from CSV to storage to UI.
+**Terminal 2 — web UI**
 
-## What to submit
+```powershell
+pnpm --filter frontend dev
+```
 
-Submit a repository containing your implementation and:
+Open **http://localhost:5173**. The API listens at **http://localhost:3000/api**; Vite proxies `/api` requests to the NestJS server.
 
-- A README with exact local setup and run commands, plus any test commands.
-- `DECISIONS.md`, using [`DECISIONS_TEMPLATE.md`](DECISIONS_TEMPLATE.md) if helpful. Include assumptions, tradeoffs, known limitations, and what you would do next.
-- `AI_WORKFLOW.md`, using [`AI_WORKFLOW_TEMPLATE.md`](AI_WORKFLOW_TEMPLATE.md) if helpful. Tell us which AI tools or agents you used, two or three specific ways you directed them, one output you checked or corrected, and how you verified the final behavior. You do not need to submit full chat transcripts. If you did not use AI, say so and explain your workflow.
-- At least two meaningful checks or tests, including one import edge case. These may be automated tests or clearly documented reproducible manual checks.
+Alternatively, after adding the missing `dev` alias to the backend scripts, `pnpm dev` starts both workspace development servers.
 
-Keep the fixture in your repository. If you only finish part of the app, explain what works and what does not; a thoughtful partial solution is useful to us.
+## Using the application
 
-## Review conversation
+1. Use **Import requests** to select a `.csv` file, such as `fixtures/requests.csv` (maximum 1 MiB).
+2. Review the imported and rejected counts, including rejection reasons and source row numbers.
+3. View the requests and filter by status.
+4. Open a request to inspect its details, update status or assigned owner, and save.
+5. Refresh or restart the API to confirm changes persist in SQLite.
 
-Be ready to demo the main workflow, show one failure case, trace a row from import through storage to the UI, and explain your decisions. We will discuss a small change to the requirements during the conversation. You may use your usual AI tools then, too.
+On a **clean database**, the original fixture should import **10 requests and reject 4 rows**. Reimporting the same file after those 10 requests are stored should import **0** and reject **14**; previously imported requests are not overwritten. Leave `fixtures/requests.csv` unchanged.
 
-## How we assess it
+## CSV data and rules
 
-We will assess product judgment, problem solving and correctness, full-stack execution, responsible use of AI agents, and your ability to explain and verify your work. We do not score the brand of AI tool, number of prompts, code volume, or visual polish.
+The CSV expects: `external_id`, `received_at`, `requester`, `subject`, `description`, `priority`.
+
+- Reject missing or blank `external_id`, `requester`, or `subject`.
+- Reject duplicate `external_id` values, whether repeated within an upload or already in the database.
+- Accept empty descriptions.
+- Accept priorities `low`, `normal`, `high`, `urgent`; reject unsupported values.
+- Require a valid ISO 8601 timestamp with timezone for `received_at`; reject invalid timestamps.
+- New requests start with status `NEW` and no owner; users can set `NEW`, `IN_PROGRESS`, or `RESOLVED` and can assign or clear an owner.
+- Rejection reports identify the physical CSV source row.
+
+See `DECISIONS.md` for trade-offs and limitations.
+
+## Verification
+
+From the repository root:
+
+```powershell
+pnpm --filter backend test
+pnpm --filter backend build
+pnpm --filter frontend build
+pnpm --filter frontend lint
+```
+
+At the last recorded verification, **7 backend tests across 3 suites passed**, and frontend/backend builds and frontend lint passed. Backend tests include CSV parsing edge cases and duplicate reimport behavior using a separate temporary SQLite database.
+
+Reproducible manual checks:
+
+- On a clean database, import the provided fixture: expect **10 imported / 4 rejected** with source row numbers. Repeat the upload: expect **0 imported / 14 rejected** and no duplicate records.
+- Import a copy with a new `external_id`, verify that one additional request is created, update its status/owner, restart the API, and verify the edits persist.
+- Check the responsive details modal at narrow widths, including background scroll locking.
+
+## Known limitations
+
+This is a small local-first application, not a deployed production service. It has no authentication or authorization, pagination, or full-text search; status filtering satisfies the list-navigation requirement. Import size is limited to 1 MiB. See `DECISIONS.md` for suggested follow-up work.

@@ -20,3 +20,13 @@ coverage/
 # Local editor and system files
 .DS_Store
 .vscode/
+
+
+# AI tool skills and generated reference files
+/backend/.agents/
+/backend/.claude/
+/backend/.windsurf/
+/backend/skills-lock.json
+
+# TypeScript incremental build cache
+*.tsbuildinfo

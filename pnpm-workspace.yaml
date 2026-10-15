@@ -1,3 +1,11 @@
+
 packages:
   - "frontend"
   - "backend"
+
+allowBuilds:
+  '@parcel/watcher': false
+  '@prisma/engines': false
+  better-sqlite3: true
+  prisma: false
+  unrs-resolver: false
