@@ -40,7 +40,7 @@ pnpm --filter frontend dev
 
 Open **http://localhost:5173**. The API listens at **http://localhost:3000/api**; Vite proxies `/api` requests to the NestJS server.
 
-Alternatively, after adding the missing `dev` alias to the backend scripts, `pnpm dev` starts both workspace development servers.
+Alternatively, run pnpm dev from the repository root to start both development servers together.
 
 ## Using the application
 
