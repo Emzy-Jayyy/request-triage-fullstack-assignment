@@ -1,0 +1,35 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Priority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum RequestStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+}
+
+model Request {
+  id          Int           @id @default(autoincrement())
+  externalId  String        @unique
+  receivedAt  DateTime
+  requester   String
+  subject     String
+  description String?
+  priority    Priority
+  status      RequestStatus @default(NEW)
+  owner       String?
+}
